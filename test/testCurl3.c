@@ -21,7 +21,10 @@ size_t deal_response(char* ptr, size_t size, size_t nmemb, void* userdata){
     int fwrite_len = 0;
     //这个应该返回已经成功写的数据
     fwrite_len = fwrite(ptr, size, nmemb, fp);
-    
+    printf("读取数据的总长度：%d\n", count);
+    printf("已经成功写入文件的长度: %d\n", fwrite_len);
+    return fwrite_len;
+
 }
 int main(int argc, char *argv[]){
     CURL* curl = NULL;
@@ -50,7 +53,7 @@ int main(int argc, char *argv[]){
     //给回调函数传递一个形参
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 
-    //向远程提交请求
+    //向远程提交请求,一直阻塞，直到服务器响应访问数据
     res = curl_easy_perform(curl);
 
     if(res != CURLE_OK){
