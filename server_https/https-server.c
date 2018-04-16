@@ -111,20 +111,20 @@ static int serve_some_http (void)
     }
 
     /* 创建SSL上下文环境 ，可以理解为 SSL句柄 */
-    SSL_CTX *ctx = SSL_CTX_new (SSLv23_server_method ());
-    SSL_CTX_set_options (ctx,
-            SSL_OP_SINGLE_DH_USE |
-            SSL_OP_SINGLE_ECDH_USE |
-            SSL_OP_NO_SSLv2);
+    //SSL_CTX *ctx = SSL_CTX_new (SSLv23_server_method ());
+    // SSL_CTX_set_options (ctx,
+    //         SSL_OP_SINGLE_DH_USE |
+    //         SSL_OP_SINGLE_ECDH_USE |
+    //         SSL_OP_NO_SSLv2);
 
     /* Cheesily pick an elliptic curve to use with elliptic curve ciphersuites.
      * We just hardcode a single curve which is reasonably decent.
      * See http://www.mail-archive.com/openssl-dev@openssl.org/msg30957.html */
-    EC_KEY *ecdh = EC_KEY_new_by_curve_name (NID_X9_62_prime256v1);
-    if (! ecdh)
-        die_most_horribly_from_openssl_error ("EC_KEY_new_by_curve_name");
-    if (1 != SSL_CTX_set_tmp_ecdh (ctx, ecdh))
-        die_most_horribly_from_openssl_error ("SSL_CTX_set_tmp_ecdh");
+    // EC_KEY *ecdh = EC_KEY_new_by_curve_name (NID_X9_62_prime256v1);
+    // if (! ecdh)
+    //     die_most_horribly_from_openssl_error ("EC_KEY_new_by_curve_name");
+    // if (1 != SSL_CTX_set_tmp_ecdh (ctx, ecdh))
+    //     die_most_horribly_from_openssl_error ("SSL_CTX_set_tmp_ecdh");
 
     /* 选择服务器证书 和 服务器私钥. */
     const char *certificate_chain = "server-certificate-chain.pem";
@@ -151,7 +151,7 @@ static int serve_some_http (void)
     // evhttp_set_cb(http, "/finishOrder", finish_order_cb, NULL);
 
     /* 设置监听IP和端口 */
-    handle = evhttp_bind_socket_with_handle (http, "192.168.23.3", serverPort);
+    handle = evhttp_bind_socket_with_handle (http, "10.108.23.217", serverPort);
     if (! handle)
     { 
         fprintf (stderr, "couldn't bind to port %d. Exiting.\n",(int) serverPort);
@@ -212,7 +212,7 @@ static int serve_some_http (void)
 int main (int argc, char **argv)
 { 
     /*OpenSSL 初始化 */
-    common_setup ();              
+    //common_setup ();              
 
     if (argc > 1) {
         char *end_ptr;
