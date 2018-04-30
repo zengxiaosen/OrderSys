@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>v-model</title>
+	<script src="js/vue.js"></script>
+	<script>
+		window.onload=function(){
+			var vm = new Vue({
+				el:'#itany',
+				data:{//存储数据
+					flag:true
+				},
+				methods:{//存储方法
+					change(){
+						this.flag=!this.flag;
+					}
+				}
+			});
+		}
+	</script>
+</head>
+<body>
+	<div id="itany">
+		<button v-on:click="flag=!flag">隐藏</button>
+		<hr />
+		<div style="width: 100px;height: 100px;background-color: red;" v-show="flag">北京欢迎您</div>
+	</div>
+	
+</body>

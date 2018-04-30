@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>v-model</title>
+	<script src="js/vue.js"></script>
+	<script>
+		window.onload=function(){
+			var vm = new Vue({
+				el:'#itany',
+				data:{//存储数据
+					w:'200px',
+					h:'100px',
+					bb:'aa',
+					flag:true,
+					dd:'cc',
+					num:3,
+					hello:{aa:true,cc:true},
+					xx:{color:'blue',fontSize:'30px'},
+					msg:'welcome to itany'
+				}
+			});
+		}
+	</script>
+	<style>
+		.aa{
+			color:red;
+			font-size:20px;
+		}
+		.cc{
+			background-color:#ccc;
+		}
+	</style>
+</head>
+<body>
+	<div id="itany">
+		<!--
+        	作者：offline
+        	时间：2018-04-30
+        	描述：可以直接访问vue中的数据，不需要使用{{}}
+        -->
+		<!--<img v-bind:src="url" />-->
+		<!--<img v-bind:src="url" :width="w" :height="h"/>-->
+		<!--
+        	作者：offline
+        	时间：2018-04-30
+        	描述：通过数组的形式同时引入多个样式
+        -->
+		<!--<p :class="[bb,dd]">
+			北京欢迎您
+		</p>-->
+		<!--
+        	作者：offline
+        	时间：2018-04-30
+        	描述：json形式
+        -->
+		<!--<p :class="{aa:num>0}">北京欢迎您</p>-->
+		<!--
+        	作者：offline
+        	时间：2018-04-30
+        	描述：变量引用json形式
+        -->
+        <p :class="hello">北京欢迎您</p>
+        <!--
+        	作者：offline
+        	时间：2018-04-30
+        	描述：style属性
+        -->
+        <p :style="xx">itany</p>
+        <input type="text" v-model="msg" />
+        <h3>aaa<span v-cloak>{{msg}}</span></h3>
+        <h3 v-text="msg"></h3>
+        <h3 v-html="msg"></h3>
+        <h3 v-once>{{msg}}</h3>
+	</div>
+	
+</body>

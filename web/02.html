@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>v-model</title>
+	<script src="js/vue.js"></script>
+	<script>
+		window.onload=function(){
+			var vm = new Vue({
+				el:'#itany',
+				data:{
+					arr:[12,4,5,34,2,11],
+					user:{id:9527,name:'唐伯虎'},
+					name:'',
+					age:21,
+				}
+			});
+		}
+	</script>
+</head>
+<body>
+	<div id="itany">
+		用户名:<input type="text" v-model="name" />
+		{{arr}}
+		{{user}}
+		{{age}}
+		{{name}}
+	</div>
+	
+</body>

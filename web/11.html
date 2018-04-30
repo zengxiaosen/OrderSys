@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>v-model</title>
+	<script src="js/vue.js"></script>
+	<script src="js/axios.min.js"></script>
+	<script>
+		
+		window.onload=function(){
+			var vm = new Vue({
+				el:'#itany',
+				methods:{
+					send(){
+						axios({
+							method:'get',
+							url:'user.json'
+						}).then(function(resp){
+							console.log(resp.data);
+						}).catch(resp => {
+							console.log('请求失败: ' + resp.status+','+resp.statusText);
+						})
+					},
+					sendGet(){
+						axios.get('server.php',{
+							params:{
+								name:'alice',
+								age:19
+							}
+						}).then(resp => {
+							console.log(resp.data);
+						}).catch(err => {
+							console.log('请求失败: '+err.status+','+err.statusText);
+						});
+					},
+					sendPost(){
+						axios.post('server1.php','name=alice&age=20').then(resp => {
+							console.log(resp.data);
+						}).catch(err => {
+							console.log('请求失败: '+err.status+','+err.statusText);
+						});
+					}
+				},
+				data:{//存储数据
+					
+				}
+			});
+		}
+	</script>
+	
+</head>
+<body>
+	<div id="itany">
+		<button @click="send">发送AJAX请求</button>
+		<button @click="sendGet">GET方式发送AJAX请求</button>
+		<button @click="sendPost">POST方式发送AJAX请求</button>
+	</div>
+	
+</body>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>v-model</title>
+	<script src="js/vue.js"></script>
+	<script>
+		window.onload=function(){
+			var vm = new Vue({
+				el:'#itany',
+				data:{//存储数据
+					
+				},
+				methods:{//存储方法
+					show(){
+						console.log(111);
+						//e.stopPropagation();
+					},
+					print(){
+						console.log(222);
+					},
+					write(){
+						console.log(333);
+					},
+					study(e){
+						console.log(444);
+						//e.preventDefault();
+					}
+				}
+			});
+		}
+	</script>
+</head>
+<body>
+	<div id="itany">
+		<div @click="write">
+			<p @click="print">
+<!--				<button @click="show($event)">点我</button>
+-->			
+				<button @click="show.stop">点我</button>
+			</p>
+		</div>
+		<hr />
+		<a href="#" @click-prevent="study">俺是连接</a>
+		
+	</div>
+	
+</body>
