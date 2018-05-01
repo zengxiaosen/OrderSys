@@ -1,6 +1,3 @@
-/**
- * 登录模块
- * */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,27 +11,18 @@
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <event2/bufferevent.h>
-#include <event2/bufferevent_ssl.h>
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/buffer.h>
-#include <event2/util.h>
-#include <event2/keyvalq_struct.h>
+
 
 #include <cJSON.h>
 #include <curl/curl.h>
 #include "https-common.h"
 #include "my_cb.h"
 #include "util.h"
+/**
+ * 注册模块
+ */
 
-
-
-
-
-
-void login_cb (struct evhttp_request *req, void *arg)
-{ 
+void reg_cb(struct evhttp_request *req, void *arg){
     int ret = 0;
     struct evbuffer *evb = NULL;
     const char *uri = evhttp_request_get_uri (req);
@@ -48,7 +36,7 @@ void login_cb (struct evhttp_request *req, void *arg)
         evbuffer_add_printf(buf, "Requested: %s\n", uri);
         evhttp_send_reply(req, HTTP_OK, "OK", buf);
         printf("get uri:%s\n", uri);
-        LOG(LOG_MODULE, LOG_PROC_LOGIN, "get uri:%s", uri);
+        LOG(LOG_MODULE, LOG_PROC_REG, "get uri:%s\n", uri);
         return;
     }
 
@@ -60,14 +48,14 @@ void login_cb (struct evhttp_request *req, void *arg)
     }
 
     printf ("Got a POST request for <%s>\n", uri);
-    LOG(LOG_MODULE, LOG_PROC_LOGIN, "Got a POST request for <%s>", uri);
-
+    LOG(LOG_MODULE, LOG_PROC_REG, "Got a POST request for <%s>\n", uri);
 
     //判断此URI是否合法
     decoded = evhttp_uri_parse (uri);
     if (! decoded)
     { 
         printf ("It's not a good URI. Sending BADREQUEST\n");
+        LOG(LOG_MODULE, LOG_PROC_REG, "It's not a good URI. Sending BADREQUEST\n");
         evhttp_send_error (req, HTTP_BADREQUEST, 0);
         return;
     }
@@ -80,9 +68,7 @@ void login_cb (struct evhttp_request *req, void *arg)
     char request_data_buf[4096] = {0};
     memcpy(request_data_buf, payload, post_data_len);
     printf("[post_data][%d]=\n %s\n", post_data_len, payload);
-    LOG(LOG_MODULE, LOG_PROC_LOGIN, "[post_data][%d]=\n %s\n", post_data_len, payload);
-
-
+    LOG(LOG_MODULE, LOG_PROC_REG, "[post_data][%d]=\n %s\n", post_data_len, payload);
 
     /*
        具体的：可以根据Post的参数执行相应操作，然后将结果输出
@@ -94,19 +80,31 @@ void login_cb (struct evhttp_request *req, void *arg)
     cJSON* username = cJSON_GetObjectItem(root, "username");
     cJSON* password = cJSON_GetObjectItem(root, "password");
     cJSON* isDriver = cJSON_GetObjectItem(root, "driver");
+    cJSON* tel      = cJSON_GetObjectItem(root, "tel");
+    cJSON* email    = cJSON_GetObjectItem(root, "email");
+    cJSON* id_card  = cJSON_GetObjectItem(root, "id_card");
 
     printf("username = %s\n", username->valuestring);
     printf("password = %s\n", password->valuestring);
-    printf("isDriver = %s\n", isDriver->valuestring);
+    printf("driver   = %s\n", isDriver->valuestring);
+    printf("tel      = %s\n", tel->valuestring);
+    printf("email    = %s\n", email->valuestring);
+    printf("id_card  = %s\n", id_card->valuestring);
 
-    ret = curl_to_dataserver_login(username->valuestring, password->valuestring, isDriver->valuestring);
-
-    char *recode = RECODE_OK;
-
+    // 发送libcurl请求 进行远程入库
+    ret = curl_to_dataserver_reg(username->valuestring,
+                                 password->valuestring,
+                                 tel->valuestring,
+                                 email->valuestring,
+                                 isDriver->valuestring,
+                                 id_card->valuestring);
     char sessionid[SESSIONID_STR_LEN] = {0};
+    char *recode = RECODE_OK;
     if (ret == 0) {
         //生成sessionid
         create_sessionid(isDriver->valuestring, sessionid);
+
+        //将sessionid入库远程缓存数据库
         ret = curl_to_cacheserver_session(username->valuestring, sessionid, ORDER_ID_NONE);
     }
 
@@ -115,19 +113,18 @@ void login_cb (struct evhttp_request *req, void *arg)
         ret = curl_to_cacheserver_lifecycle(sessionid, SESSIONID_LIFECYCLE);
     }
 
-
     //将sessionid存放到缓存数据库中
-    char *response_data = make_reg_login_res_json(ret, recode, sessionid, "login error");
+    char *response_data = make_reg_login_res_json(ret, recode, sessionid, "reg error");
 
     cJSON_Delete(root);
-    // =========================================================
-
+    //=======================================================
     /* This holds the content we're sending. */
 
     //HTTP header
     evhttp_add_header(evhttp_request_get_output_headers(req), "Server", MYHTTPD_SIGNATURE);
     evhttp_add_header(evhttp_request_get_output_headers(req), "Content-Type", "text/plain; charset=UTF-8");
     evhttp_add_header(evhttp_request_get_output_headers(req), "Connection", "close");
+
 
     evb = evbuffer_new ();
     evbuffer_add_printf(evb, "%s", response_data);
@@ -142,8 +139,9 @@ void login_cb (struct evhttp_request *req, void *arg)
 
     printf("[response]:\n");
     printf("%s\n", response_data);
-    LOG(LOG_MODULE, LOG_PROC_LOGIN,"[response]:\n");
-    LOG(LOG_MODULE, LOG_PROC_LOGIN, "%s\n", response_data);
+    LOG(LOG_MODULE, LOG_PROC_REG, "[response]:\n");
+    LOG(LOG_MODULE, LOG_PROC_REG, "%s\n", response_data);
 
     free(response_data);
+
 }

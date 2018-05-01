@@ -87,5 +87,176 @@ void locationChanged_cb(struct evhttp_request *req, void *arg){
 
     //unpack json
     cJSON* root = cJSON_Parse(request_data_buf);
+    cJSON* sessionid = cJSON_GetObjectItem(root, "sessionid");
+    cJSON* driver = cJSON_GetObjectItem(root, "driver");
+    cJSON* status = cJSON_GetObjectItem(root, "status");
+    cJSON* longitude = cJSON_GetObjectItem(root, "longitude");
+    cJSON* latitude = cJSON_GetObjectItem(root, "latitude");
+    cJSON* address = cJSON_GetObjectItem(root, "address");
+
+    if(strcmp(driver->valuestring, "no") == 0 &&
+       strcmp(status->valuestring, STATUS_PASSENGER_WAIT) == 0){
+           cJSON* dst_longitude = cJSON_GetObjectItem(root, "dst_longitude");
+           cJSON* dst_latitude = cJSON_GetObjectItem(root, "dst_latitude");
+           cJSON* dst_address = cJSON_GetObjectItem(root, "dst_address");
+           printf("dst_longitude= %s\n", dst_longitude->valuestring);
+           printf("dst_latitude= %s\n", dst_latitude->valuestring);
+           printf("dst_address = %s\n", dst_address->valuestring);
+    }
+
+    printf("sessionid = %s\n", sessionid->valuestring);
+    printf("driver = %s\n", driver->valuestring);
+    printf("status = %s\n", status->valuestring);
+    printf("longitude= %s\n",longitude->valuestring);
+    printf("latitude= %s\n", latitude->valuestring);
+    printf("address = %s\n", address->valuestring);
+
+    char orderid[ORDERID_STR_LEN] = {0};
+    char* recode = RECODE_OK;
+
+    //1判断sessionid 是否存在
+    ret = curl_to_cacheserver_existsessionid(sessionid->valuestring);
+    if (ret != 0)  {
+        //如果不存在则返回失败
+        recode = RECODE_SERVER_ERROR;
+    }
+
+
+    //2 更新sessionid的生命周期
+    if (ret == 0) {
+        ret = curl_to_cacheserver_lifecycle(sessionid->valuestring, SESSIONID_LIFECYCLE);
+    }
+
     
+#if 0
+    //4 更新当前用户的状态
+    if (ret == 0) {
+    }
+#endif
+
+    if(ret == 0){
+        if(strcmp(driver->valuestring, "yes") == 0){
+            //===========司机分支==============//
+            cJSON* autosend = cJSON_GetObjectItem(root, "autosend");
+            printf("autosend= %s\n", autosend->valuestring);
+
+            char ptemp_longitude[LOCATION_POINT_STR_LEN] = {0};
+            char ptemp_latitude[LOCATION_POINT_STR_LEN] = {0};
+
+            if (strcmp(status->valuestring, STATUS_DRIVER_DRIVE) == 0) {
+
+                //-------driving状态业务------
+                //将自己从 地址池 中摘除
+                curl_to_cacheserver_remGeo(sessionid->valuestring);
+                //如果是首次第一次变成driving状态,需要更新临时订单 真是出发坐标和时间信息
+                if (strcmp(autosend->valuestring, "yes") == 0) {
+                    char now_time[TIME_STR_LEN] = {0};
+                    get_time_str(now_time);
+                    curl_to_cacheserver_startorder_real(orderid, "ACTIVE", now_time, address->valuestring, longitude->valuestring, latitude->valuestring);
+                }
+
+                //更新自己当前的坐标信息到临时订单
+                curl_to_cacheserver_set_dtemp_location(orderid, longitude->valuestring, latitude->valuestring);
+
+                //得到当前临时订单中的乘客的 最新坐标地址
+                curl_to_cacheserver_get_ptemp_location(orderid, ptemp_longitude, ptemp_latitude);
+            }
+
+            else if (strcmp(status->valuestring, STATUS_DRIVER_IDLE) == 0) {
+                //--------idle 状态业务----------
+                //将自己从 地址池 中摘除
+                ret = curl_to_cacheserver_remGeo(sessionid->valuestring);
+
+            }
+
+            else if (strcmp(status->valuestring, STATUS_DRIVER_CATCH) == 0) {
+                //--------catching状态 业务---------
+
+                //将自己从 地址池 中摘除
+                curl_to_cacheserver_remGeo(sessionid->valuestring);
+
+                //更新自己当前的坐标信息到临时订单
+                curl_to_cacheserver_set_dtemp_location(orderid, longitude->valuestring, latitude->valuestring);
+
+                //得到当前临时订单中的乘客的 最新坐标地址
+                curl_to_cacheserver_get_ptemp_location(orderid, ptemp_longitude, ptemp_latitude);
+                
+            }
+
+            else if (strcmp(status->valuestring, STATUS_DRIVER_READY) == 0) {
+                //---------ready 状态业务----------
+
+                //更新自己的坐标池信息
+                curl_to_cacheserver_remGeo(sessionid->valuestring);
+                curl_to_cacheserver_addGeo(sessionid->valuestring, longitude->valuestring, latitude->valuestring);
+            }
+
+            response_data = make_driver_locationChanged_res_json(ret, recode, status->valuestring, orderid, "Driver LocationChanged error", ptemp_longitude, ptemp_latitude);
+            goto END;
+
+        }
+
+        else if (strcmp(driver->valuestring, "no") == 0) {
+            //=============乘客分支==============//
+
+            char dtemp_longitude[LOCATION_POINT_STR_LEN] = {0};
+            char dtemp_latitude[LOCATION_POINT_STR_LEN] = {0};
+            char order_status[ORDERID_STR_LEN] = {0};
+
+            if (strcmp(status->valuestring, STATUS_PASSENGER_TRAVEL) == 0) {
+                //traveling状态业务
+                //更新自己当前的坐标信息到临时订单
+                curl_to_cacheserver_set_ptemp_location(orderid, longitude->valuestring, latitude->valuestring);
+
+                //得到当前临时订单中的司机的 最新坐标地址
+                curl_to_cacheserver_get_dtemp_location(orderid, dtemp_longitude, dtemp_latitude);
+
+            }
+            else if (strcmp(status->valuestring, STATUS_PASSENGER_IDLE) == 0) {
+                //idle 状态业务
+            }
+            else if (strcmp(status->valuestring, STATUS_PASSENGER_WAIT) == 0) {
+                //waiting状态 业务
+
+                //更新自己当前的坐标信息到临时订单
+                curl_to_cacheserver_set_ptemp_location(orderid, longitude->valuestring, latitude->valuestring);
+
+                //得到当前临时订单中的司机的 最新坐标地址
+                curl_to_cacheserver_get_dtemp_location(orderid, dtemp_longitude, dtemp_latitude);
+
+                //得到当前临时订单中的 订单状态 
+                curl_to_cacheserver_get_order_status(orderid, order_status);
+            }
+            response_data = make_passenger_locationChanged_res_json(ret, recode, status->valuestring, orderid, "Passenger LocationChanged error", dtemp_longitude, dtemp_latitude, order_status);
+            goto END;
+
+        }
+    }
+    response_data = make_gen_res_json(ret, recode, " locationChanged ERROR");
+END:
+    cJSON_Delete(root);
+    // =========================================================
+
+    /* This holds the content we're sending. */
+
+    //HTTP header
+    evhttp_add_header(evhttp_request_get_output_headers(req), "Server", MYHTTPD_SIGNATURE);
+    evhttp_add_header(evhttp_request_get_output_headers(req), "Content-Type", "text/plain; charset=UTF-8");
+    evhttp_add_header(evhttp_request_get_output_headers(req), "Connection", "close");
+
+    evb = evbuffer_new ();
+    evbuffer_add_printf(evb, "%s", response_data);
+    //将封装好的evbuffer 发送给客户端
+    evhttp_send_reply(req, HTTP_OK, "OK", evb);
+
+    if (decoded)
+        evhttp_uri_free (decoded);
+    if (evb)
+        evbuffer_free (evb);
+
+
+    printf("[response]:\n");
+    printf("%s\n", response_data);
+
+    free(response_data);
 }
